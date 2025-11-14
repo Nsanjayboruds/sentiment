@@ -1,6 +1,6 @@
 import streamlit as st
 import cv2
-from fer import FER
+from fer.fer import FER   # ✅ FIXED IMPORT
 import numpy as np
 
 st.set_page_config(page_title="AI Emotion Detector", layout="centered")
