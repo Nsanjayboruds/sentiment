@@ -1,40 +1,43 @@
 import streamlit as st
 import cv2
-from deepface import DeepFace
-from utils import draw_emotion
+from fer import FER
+import numpy as np
 
 st.set_page_config(page_title="AI Emotion Detector", layout="centered")
 
-st.title("🤖 Jarvis Real-Time Emotion Detection")
-st.markdown("Detect your emotion using your webcam.")
+st.title("😊 Real-Time Emotion Detection (Streamlit Compatible)")
+st.markdown("No sound • No TensorFlow • No DeepFace • Works on Streamlit Cloud")
 
 run = st.checkbox("Start Webcam")
 FRAME_WINDOW = st.image([])
 
-def analyze_emotion(frame):
-    result = DeepFace.analyze(
-        frame,
-        actions=['emotion'],
-        enforce_detection=False
-    )
-    emotion = result[0]['dominant_emotion']
-    confidence = result[0]['emotion'][emotion]
-    return emotion, confidence
+detector = FER()
+
+camera = None
 
 if run:
-    cap = cv2.VideoCapture(0)
-    while run:
-        ret, frame = cap.read()
-        if not ret:
-            st.warning("⚠️ Unable to access camera.")
-            break
+    camera = cv2.VideoCapture(0)
 
-        try:
-            emotion, confidence = analyze_emotion(frame)
-            frame = draw_emotion(frame, emotion, confidence)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            FRAME_WINDOW.image(frame)
-        except Exception as e:
-            st.error(f"Error: {e}")
-else:
-    st.info("Click checkbox to start webcam.")
+while run:
+    ret, frame = camera.read()
+    if not ret:
+        st.write("Camera not accessible")
+        break
+
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    emotions = detector.detect_emotions(rgb)
+
+    if emotions:
+        box = emotions[0]["box"]
+        emotion, score = max(emotions[0]["emotions"].items(), key=lambda x: x[1])
+
+        x, y, w, h = box
+        cv2.rectangle(rgb, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.putText(rgb, f"{emotion} ({score:.2f})", (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+    FRAME_WINDOW.image(rgb)
+
+if camera:
+    camera.release()
